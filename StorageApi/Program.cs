@@ -1,4 +1,7 @@
 
+using Microsoft.EntityFrameworkCore;
+using StorageApi.Data;
+
 namespace StorageApi
 {
     public class Program
@@ -6,6 +9,9 @@ namespace StorageApi
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.AddDbContext<StorageContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // Add services to the container.
 
