@@ -1,14 +1,20 @@
-﻿namespace StorageApi.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace StorageApi.DTOs
 {
-    public class Product
+    public class CreateProductDto
     {
-        public int Id { get; set; }
+        [Required]
         public string Name { get; set; } = null!;
+        [Range(1, int.MaxValue)]
         public int Price { get; set; }
+        [Required]
         public string Category { get; set; } = null!;
+        [StringLength(3, MinimumLength = 1)]
+        [Required]
         public string Shelf { get; set; } = null!;
+        [Range(1, 100)]
         public int Count { get; set; }
         public string? Description { get; set; }
-        public int InventoryValue => Price * Count;
     }
 }

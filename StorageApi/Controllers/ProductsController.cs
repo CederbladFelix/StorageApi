@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StorageApi.Data;
+using StorageApi.DTOs;
 using StorageApi.Models;
 
 namespace StorageApi.Controllers
@@ -23,14 +24,40 @@ namespace StorageApi.Controllers
 
         // GET: api/Products
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
+        public async Task<ActionResult<IEnumerable<ProductDto>>> GetProducts(
+                                                                        [FromQuery] string? category,
+                                                                        [FromQuery] string? name
+                                                                        )
         {
-            return await _context.Products.ToListAsync();
+            var productsQuery = _context.Products.AsQueryable();
+            
+            if (!string.IsNullOrWhiteSpace(category))           
+                productsQuery = productsQuery.Where(product => product.Category == category);
+
+            if (!string.IsNullOrWhiteSpace(name))
+                productsQuery = productsQuery.Where(product => product.Name.ToLower().Contains(name.ToLower()));
+
+
+
+            var products = await productsQuery.ToListAsync();
+
+            var productsDtos = products
+                                .Select(product => new ProductDto
+                                {
+                                    Id = product.Id,
+                                    Name = product.Name,
+                                    Price = product.Price,
+                                    Count = product.Count
+                                })
+                                .ToList();
+
+            return Ok(productsDtos);
+
         }
 
         // GET: api/Products/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id)
+        public async Task<ActionResult<ProductDto>> GetProduct(int id)
         {
             var product = await _context.Products.FindAsync(id);
 
@@ -39,21 +66,56 @@ namespace StorageApi.Controllers
                 return NotFound();
             }
 
-            return product;
+            var productDto = new ProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Price = product.Price,
+                Count = product.Count
+            };
+
+            return Ok(productDto);
+        }
+
+        // GET: api/Products/stats
+        [HttpGet("stats")]
+        public async Task<ActionResult<StatsDto>> GetStats()
+        {
+            var products = await _context.Products.ToListAsync();
+
+            if (!products.Any())
+                return Ok(new StatsDto());
+
+            var statsDto = new StatsDto
+            {
+                TotalNumberOfProducts = products.Count,
+                TotalInventoryValue = products.Sum(product => product.InventoryValue),
+                AveragePrice = Math.Round(products.Average(product => product.Price), 2)
+            };
+
+
+            return Ok(statsDto);
         }
 
         // PUT: api/Products/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduct(int id, Product product)
+        public async Task<IActionResult> PutProduct(int id, CreateProductDto dto)
         {
-            if (id != product.Id)
+            var product = await _context.Products.FindAsync(id);
+
+            if (product == null)
             {
-                return BadRequest();
+                return NotFound();
             }
 
-            _context.Entry(product).State = EntityState.Modified;
-
+            product.Name = dto.Name;
+            product.Price = dto.Price;
+            product.Category = dto.Category;
+            product.Shelf = dto.Shelf;
+            product.Count = dto.Count;
+            product.Description = dto.Description;
+              
             try
             {
                 await _context.SaveChangesAsync();
@@ -76,12 +138,30 @@ namespace StorageApi.Controllers
         // POST: api/Products
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Product>> PostProduct(Product product)
+        public async Task<ActionResult<ProductDto>> PostProduct(CreateProductDto dto)
         {
+            var product = new Product
+            {
+                Name = dto.Name,
+                Price = dto.Price,
+                Category = dto.Category,
+                Shelf = dto.Shelf,
+                Count = dto.Count,
+                Description = dto.Description
+            };
+
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+            var productDto = new ProductDto
+            {
+                Id = product.Id,
+                Name = dto.Name,
+                Price = dto.Price,
+                Count = dto.Count
+            };
+
+            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, productDto);
         }
 
         // DELETE: api/Products/5
