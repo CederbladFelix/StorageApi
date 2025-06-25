@@ -32,10 +32,12 @@ namespace StorageApi.Controllers
             var productsQuery = _context.Products.AsQueryable();
             
             if (!string.IsNullOrWhiteSpace(category))           
-                productsQuery = productsQuery.Where(product => product.Category == category);
+                productsQuery = productsQuery
+                                .Where(product => product.Category.ToLower().Contains(category.ToLower()));
 
             if (!string.IsNullOrWhiteSpace(name))
-                productsQuery = productsQuery.Where(product => product.Name.ToLower().Contains(name.ToLower()));
+                productsQuery = productsQuery
+                                .Where(product => product.Name.ToLower().Contains(name.ToLower()));
 
 
 
